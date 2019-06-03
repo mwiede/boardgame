@@ -17,12 +17,41 @@ class Spiel extends React.Component {
 
     constructor(props) {
         super(props);
-        this.state = {
 
+        this.state = {
+            gestartet: false,
+            anzahlSpieler: 3,
+            breite: 3,
+            hoehe: 5,
+            spieler: [],
+            aktionen: [],
+            aktuellerSpieler: 0,
+            gewinner: null,
         }
+        this.spielzug.bind(this);
     }
 
-    render() {
+    starteSpiel() {
+        this.init();
+        let spieler = [];
+        for (let index = 0; index < this.state.anzahlSpieler; index++) {
+            spieler.push({
+                id: index,
+                position: 0,
+            });
+        }
+        this.setState({
+            gestartet: true,
+            anzahlSpieler: this.state.anzahlSpieler,
+            spieler: spieler,
+        });
+    }
+
+    init() {
+
+        const leiterSprosse = (position, breite) => {
+            return 2 * breite - 1 - (2 * (position % breite)) + position;
+        }
 
         let einSchritt = {
             name: 'einSchritt',
@@ -57,97 +86,141 @@ class Spiel extends React.Component {
             aufgedeckt: false,
         };
 
-        const leiterSprosse = position => {
-            return 2 * breite - 1 - (2 * (position % breite)) + position;
-        };
+
 
         let leiter1 = {
             name: 'Leiter - 3 Sprossen',
-            schrittAktion: position => leiterSprosse(leiterSprosse(leiterSprosse(position))),
+            schrittAktion: (position, breite) => leiterSprosse(leiterSprosse(leiterSprosse(position, breite), breite), breite),
             boardAktion: () => { },
             aufgedeckt: false,
         };
 
         let leiter2 = {
             name: 'Leiter - 2 Sprossen',
-            schrittAktion: position => leiterSprosse(leiterSprosse(position)),
+            schrittAktion: (position, breite) => leiterSprosse(leiterSprosse(position, breite), breite),
             boardAktion: () => { },
             aufgedeckt: false,
         };
 
         let aktionen = [einSchritt, zweiSchritte, mischen, zudecken, leiter1, leiter2];
 
-        const ermittleGewinner = (spieler) => {
-            let gewinnerFeld = breite * hoehe;
-            for (let index = 0; index < spieler.length; index++) {
-                if (spieler[index].position >= gewinnerFeld) {
-                    return spieler[index];
-                }
+        this.setState({
+            gestartet: false,
+            gewinner: null,
+            aktionen: aktionen,
+        });
+    }
+
+    ermittleGewinner() {
+        let spieler = this.state.spieler;
+        let gewinnerFeld = this.state.breite * this.state.hoehe;
+        for (let index = 0; index < spieler.length; index++) {
+            if (spieler[index].position >= gewinnerFeld) {
+                return spieler[index];
             }
-            return false;
+        }
+        return false;
+    }
+
+    spielzug(aktion) {
+
+        var spieler = this.state.spieler[this.state.aktuellerSpieler];
+
+        console.log("spieler " + spieler.id + " spielt mit Aktion " + aktion.name);
+
+        const positionVorher = spieler.position;
+
+        spieler.position = aktion.schrittAktion(spieler.position, this.state.breite);
+
+        console.log("spieler " + spieler.id + " springt von " + positionVorher + " auf Position " + spieler.position);
+
+        aktion.aufgedeckt = true;
+
+        aktion.boardAktion();
+
+        let gewinner = this.ermittleGewinner();
+        if (!gewinner) {
+            // nächster Spieler
+            this.setState({ aktuellerSpieler: (this.state.aktuellerSpieler + 1) % this.state.anzahlSpieler });
+        }
+        else {
+            this.setState({ gewinner: gewinner });
         }
 
-        const spielzug = spieler => {
+    }
 
-            var zugedeckteAktionen = aktionen.filter(aktion => !aktion.aufgedeckt);
+    render() {
 
-            // per Zufall
-            var min = 0;
-            var max = zugedeckteAktionen.length;
-            var zufall = Math.floor(Math.random() * (+max - +min)) + +min;
-
-            var aktion = zugedeckteAktionen[zufall];
-
-            console.log("spieler " + spieler.id + " spielt mit Aktion " + aktion.name);
-
-            const positionVorher = spieler.position;
-
-            spieler.position = aktion.schrittAktion(spieler.position);
-
-            console.log("spieler " + spieler.id + " springt von " + positionVorher + " auf Position " + spieler.position);
-
-            aktion.aufgedeckt = true;
-
-            aktion.boardAktion();
-
-        }
-
-        const anzahlSpieler = 3;
-        const breite = 3;
-        const hoehe = 5;
+        const { anzahlSpieler, breite, hoehe, spieler, aktionen } = this.state;
 
         const zeilen = [];
 
         for (let zeile = 0; zeile < hoehe; zeile++) {
             let spalten = [];
             for (let spalte = 0; spalte < breite; spalte++) {
-                spalten.push(<td key={spalte}>{zeile}-{spalte}</td>);
+
+                let gerade = zeile % 2 === 0;
+
+                let position = (breite * hoehe - 1) - (gerade ? spalte + (zeile * breite) : breite - 1 - spalte + (zeile * breite));
+
+                spalten.push(<td key={spalte}>{zeile}-{spalte} ({position})
+
+                {spieler.filter(s => s.position === position).map(s => <div key={s.id}>Spieler {s.id}</div>)}
+
+                </td>);
             }
             zeilen.push(<tr key={zeile}>{spalten}</tr>);
         }
 
         const brett = <table border="1"><tbody>{zeilen}</tbody></table>;
 
-        const aktionenListe = <ul>{aktionen.filter(aktion => !aktion.aufgedeckt)
-            .map(aktion => <li key={aktion.name}>{aktion.name}</li>)}</ul>
+        const aktionenListe = <ul>
+            {aktionen.map(aktion =>
+                <li key={aktion.name}>
+                    {aktion.aufgedeckt && aktion.name}
+                    {!aktion.aufgedeckt && <input type="button" defaultValue="Auswählen" onClick={() => this.spielzug(aktion)} />}
+
+                    <div>debug: {aktion.name}</div>
+                </li>
+            )}
+        </ul>
 
         return (<>
 
-            Hallo, wieviele Spieler?
+            {!this.state.gestartet && (
+                <>
+                    Hallo, wieviele Spieler?
+                    <input value={anzahlSpieler} name="anzahlSpieler" onChange={(event) => this.setState({ anzahlSpieler: event.target.value })} />
+                    <input type="button" defaultValue="Start"
+                        onClick={this.starteSpiel.bind(this)} /></>)}
 
-        <input defaultValue={anzahlSpieler} name="anzahlSpieler" />
-            <input type="button" defaultValue="Start" />
+            {this.state.gestartet && <>
+                Aktueller Spieler: Spieler {this.state.aktuellerSpieler}
 
-            <table>
-                <tbody>
-                    <tr>
-                        <td>{aktionenListe}</td>
-                        <td> {brett}</td>
-                    </tr>
-                </tbody>
-            </table>
+                <table>
+                    <tbody>
+                        <tr>
+                            <td>{aktionenListe}</td>
+                            <td> {brett}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p>
+                    <input type="button" defaultValue="Neues Spiel" onClick={this.init.bind(this)} />
+                </p>
+            </>
+            }
+
+            {this.state.gewinner && (
+                <>Gewinner ist Spieler {this.state.gewinner.id}</>)
+            }
+
+
 
         </>)
+
+
     }
 }
 
