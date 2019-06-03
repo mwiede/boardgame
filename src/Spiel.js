@@ -108,6 +108,7 @@ class Spiel extends React.Component {
             gestartet: false,
             gewinner: null,
             aktionen: aktionen,
+            aktuellerSpieler: 0,
         });
     }
 
@@ -124,13 +125,15 @@ class Spiel extends React.Component {
 
     spielzug(aktion) {
 
-        var spieler = this.state.spieler[this.state.aktuellerSpieler];
+        const { aktuellerSpieler, breite, anzahlSpieler } = this.state;
+
+        var spieler = this.state.spieler[aktuellerSpieler];
 
         console.log("spieler " + spieler.id + " spielt mit Aktion " + aktion.name);
 
         const positionVorher = spieler.position;
 
-        spieler.position = aktion.schrittAktion(spieler.position, this.state.breite);
+        spieler.position = aktion.schrittAktion(spieler.position, breite);
 
         console.log("spieler " + spieler.id + " springt von " + positionVorher + " auf Position " + spieler.position);
 
@@ -141,7 +144,11 @@ class Spiel extends React.Component {
         let gewinner = this.ermittleGewinner();
         if (!gewinner) {
             // nächster Spieler
-            this.setState({ aktuellerSpieler: (this.state.aktuellerSpieler + 1) % this.state.anzahlSpieler });
+            if (this.state.anzahlSpieler > 1) {
+                this.setState({ aktuellerSpieler: (aktuellerSpieler + 1) % anzahlSpieler });
+            } else {
+                this.setState({ aktuellerSpieler: 0 });
+            }
         }
         else {
             this.setState({ gewinner: gewinner });
@@ -174,16 +181,15 @@ class Spiel extends React.Component {
 
         const brett = <table border="1"><tbody>{zeilen}</tbody></table>;
 
-        const aktionenListe = <ul>
+        const aktionenListe = <div>Aktionen: <ul>
             {aktionen.map(aktion =>
                 <li key={aktion.name}>
                     {aktion.aufgedeckt && aktion.name}
                     {!aktion.aufgedeckt && <input type="button" defaultValue="Auswählen" onClick={() => this.spielzug(aktion)} />}
 
-                    <div>debug: {aktion.name}</div>
                 </li>
             )}
-        </ul>
+        </ul></div>
 
         return (<>
 
@@ -196,19 +202,20 @@ class Spiel extends React.Component {
 
             {this.state.gestartet && <>
                 Aktueller Spieler: Spieler {this.state.aktuellerSpieler}
+                <div>
+                    <table style={{ marginLeft: 'auto', marginRight: 'auto' }}>
+                        <tbody>
+                            <tr>
+                                <td>{aktionenListe}</td>
+                                <td> {brett}</td>
+                            </tr>
+                        </tbody>
+                    </table>
 
-                <table>
-                    <tbody>
-                        <tr>
-                            <td>{aktionenListe}</td>
-                            <td> {brett}</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <p>
-                    <input type="button" defaultValue="Neues Spiel" onClick={this.init.bind(this)} />
-                </p>
+                    <p>
+                        <input type="button" defaultValue="Neues Spiel" onClick={this.init.bind(this)} />
+                    </p>
+                </div>
             </>
             }
 
