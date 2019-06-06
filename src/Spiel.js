@@ -1,17 +1,46 @@
 import React from 'react';
-/**
- * Shuffles array in place. ES6 version
- * @param {Array} a items An array containing the items.
- */
-function shuffle(a) {
-    for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
+
+class Aktion extends React.Component {
+    constructor(props) {
+        super(props);
+
+        this.state = {
+            ausgefuehrt: false,
+        }
     }
-    return a;
+
+    aufdecken() {
+
+        const { aktion, aufdeckenFunktion, spielzugFunktion } = this.props;
+        const { ausgefuehrt } = this.state;
+
+        if (!aktion.aufgedeckt) {
+            this.setState({
+                ausgefuehrt: false
+            });
+            aufdeckenFunktion();
+        }
+        else if (!ausgefuehrt) {
+            spielzugFunktion();
+            this.setState({
+                ausgefuehrt: true
+            });
+        }
+
+    }
+
+    render() {
+
+        const { aktion } = this.props;
+
+        return (
+
+            <svg height="100" width="100" onClick={this.aufdecken.bind(this)}>
+                <circle cx="50" cy="50" r="40" stroke="black" strokeWidth="2" fill="red" />
+                <text x="50%" y="50%" textAnchor="middle"> {aktion.aufgedeckt && aktion.name}</text>
+            </svg>)
+    }
 }
-
-
 
 class Spiel extends React.Component {
 
@@ -27,6 +56,7 @@ class Spiel extends React.Component {
             aktionen: [],
             aktuellerSpieler: 0,
             gewinner: null,
+            aktuelleAktion: null,
         }
         this.spielzug.bind(this);
     }
@@ -48,6 +78,13 @@ class Spiel extends React.Component {
     }
 
     init() {
+        const shuffle = (a) => {
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
 
         const leiterSprosse = (position, breite) => {
             return 2 * breite - 1 - (2 * (position % breite)) + position;
@@ -72,7 +109,7 @@ class Spiel extends React.Component {
             schrittAktion: position => position,
             boardAktion: () => {
                 aktionen.forEach(aktion => { aktion.aufgedeckt = false; });
-                shuffle(aktionen)
+                this.setState({aktionen: shuffle(aktionen)});
             },
             aufgedeckt: false,
         };
@@ -109,6 +146,7 @@ class Spiel extends React.Component {
             gewinner: null,
             aktionen: aktionen,
             aktuellerSpieler: 0,
+            aktuelleAktion: null,
         });
     }
 
@@ -125,7 +163,12 @@ class Spiel extends React.Component {
 
     spielzug(aktion) {
 
-        const { aktuellerSpieler, breite, anzahlSpieler } = this.state;
+        const { aktuellerSpieler, breite, anzahlSpieler, aktuelleAktion } = this.state;
+
+        if (aktion !== aktuelleAktion) {
+            console.log('falsche Aktion');
+            return;
+        }
 
         var spieler = this.state.spieler[aktuellerSpieler];
 
@@ -137,23 +180,42 @@ class Spiel extends React.Component {
 
         console.log("spieler " + spieler.id + " springt von " + positionVorher + " auf Position " + spieler.position);
 
-        aktion.aufgedeckt = true;
-
-        aktion.boardAktion();
-
         let gewinner = this.ermittleGewinner();
         if (!gewinner) {
+
+            aktion.boardAktion();
+
             // nächster Spieler
             if (this.state.anzahlSpieler > 1) {
-                this.setState({ aktuellerSpieler: (aktuellerSpieler + 1) % anzahlSpieler });
+                this.setState({
+                    aktuellerSpieler: (aktuellerSpieler + 1) % anzahlSpieler,
+                    aktuelleAktion: null
+                });
             } else {
-                this.setState({ aktuellerSpieler: 0 });
+                this.setState({ aktuellerSpieler: 0, aktuelleAktion: null });
             }
         }
         else {
             this.setState({ gewinner: gewinner });
         }
 
+    }
+
+    aufdecken(aktion) {
+        if (aktion.aufgedeckt) {
+            console.log('aktuelleAktion schon aufgedeckt.');
+            return;
+        }
+        if (this.state.aktuelleAktion) {
+            console.log('aktuelleAktion gesetzt. Aufdecken nicht erlaubt');
+            return;
+        }
+        let tmp = [...this.state.aktionen];
+        tmp.forEach(a => { if (a === aktion) aktion.aufgedeckt = true; })
+        this.setState({
+            aktionen: tmp,
+            aktuelleAktion: aktion
+        });
     }
 
     render() {
@@ -181,15 +243,11 @@ class Spiel extends React.Component {
 
         const brett = <table border="1"><tbody>{zeilen}</tbody></table>;
 
-        const aktionenListe = <div>Aktionen: <ul>
+        const aktionenListe = <div>Aktionen:
             {aktionen.map(aktion =>
-                <li key={aktion.name}>
-                    {aktion.aufgedeckt && aktion.name}
-                    {!aktion.aufgedeckt && <input type="button" defaultValue="Auswählen" onClick={() => this.spielzug(aktion)} />}
-
-                </li>
-            )}
-        </ul></div>
+            <Aktion key={aktion.name} aktion={aktion} spielzugFunktion={() => this.spielzug(aktion)} aufdeckenFunktion={() => this.aufdecken(aktion)} />
+        )}
+        </div>
 
         return (<>
 
@@ -199,6 +257,10 @@ class Spiel extends React.Component {
                     <input value={anzahlSpieler} name="anzahlSpieler" onChange={(event) => this.setState({ anzahlSpieler: event.target.value })} />
                     <input type="button" defaultValue="Start"
                         onClick={this.starteSpiel.bind(this)} /></>)}
+
+            {this.state.gewinner && (
+                <>Gewinner ist Spieler {this.state.gewinner.id}</>)
+            }
 
             {this.state.gestartet && <>
                 Aktueller Spieler: Spieler {this.state.aktuellerSpieler}
@@ -219,9 +281,7 @@ class Spiel extends React.Component {
             </>
             }
 
-            {this.state.gewinner && (
-                <>Gewinner ist Spieler {this.state.gewinner.id}</>)
-            }
+
 
 
 
