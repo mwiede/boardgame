@@ -7,16 +7,11 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>       
+        <img src={logo} className="App-logo" alt="logo" />   
       </header>
       <main>
-        <h1>Starte ein Spiel</h1>
-
+        <h1>Feuerwehrmann Sam</h1>
         <Spiel/>      
-
       </main>
     </div>
   );
