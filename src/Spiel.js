@@ -57,8 +57,8 @@ class Spiel extends React.Component {
         this.state = {
             gestartet: false,
             anzahlSpieler: 3,
-            breite: 3,
-            hoehe: 5,
+            breite: 4,
+            hoehe: 6,
             spieler: [],
             aktionen: [],
             aktuellerSpieler: 0,
@@ -248,33 +248,53 @@ class Spiel extends React.Component {
                 let gerade = zeile % 2 === 0;
 
                 let position = (breite * hoehe - 1) - (gerade ? spalte + (zeile * breite) : breite - 1 - spalte + (zeile * breite));
-                
-                
+
+
                 var borderRadius = '0 0 0 0';
-                if(spalte===0 && gerade){
+                var padding = '5px 0 5px 0';
+                if (spalte === 0 && gerade) { // Rundung unten links
                     borderRadius = '0 0 0 20px';
-                } else if(gerade && spalte===breite-1){
-                    borderRadius = '0 20px 0 0';                
-                } else if(!gerade && spalte===breite-1){
+                    padding = '0 0 5px 0';
+                } else if (gerade && spalte === breite - 1) {// Rundung oben rechts
+                    borderRadius = '0 20px 0 0';
+                    padding = '5px 0 0 0';
+                } else if (!gerade && spalte === breite - 1) {// rundung unten rechts
                     borderRadius = ' 0 0 20px 0';
-                } else if(spalte===0){
+                    padding = '0 0 5px 0';
+                } else if (spalte === 0) { // Rundung oben links
                     borderRadius = '20px 0 0 0';
-                } 
+                    padding = '5px 0 0 0';
+                }
 
                 spalten.push(<td key={spalte} style={{
-                        'backgroundImage': 'ladder.svg',
+                    border: 0,
+                    padding: padding,
+                    width: 80,
+                    height: 80,
+                }}>
+                    <div style={{
+                        width: '100%',
+                        height: '100%',
                         borderRadius: borderRadius,
-                        backgroundColor: 'yellow'
-                    }}>{zeile}-{spalte} ({position})
+                        backgroundColor: 'yellow',
+                        textAlign: 'center',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}>
+                        <h1>{position + 1}</h1>
 
-                {spieler.filter(s => s.position === position).map(s => <div key={s.id}>Spieler {s.id}</div>)}
+                        {spieler.filter(s => s.position === position).map(s =>
+                            <div key={s.id} style={{position:'absolute', marginTop: 15*s.id-10,}}>Spieler {s.id}</div>)}
+                    </div>
+
 
                 </td>);
             }
             zeilen.push(<tr key={zeile}>{spalten}</tr>);
         }
 
-        const brett = <table>
+        const brett = <table style={{ borderCollapse: 'collapse' }}>
             <tbody>{zeilen}</tbody>
         </table>;
 
@@ -287,14 +307,14 @@ class Spiel extends React.Component {
         return (<>
 
             {!this.state.gestartet && (
-                <>
+                <div>
                     Hallo, wieviele Spieler?
                     <input value={anzahlSpieler} name="anzahlSpieler" onChange={(event) => this.setState({ anzahlSpieler: event.target.value })} />
                     <input type="button" defaultValue="Start"
-                        onClick={this.starteSpiel.bind(this)} /></>)}
+                        onClick={this.starteSpiel.bind(this)} /></div>)}
 
             {this.state.gewinner && (
-                <>Gewinner ist Spieler {this.state.gewinner.id}</>)
+                <div>Gewinner ist Spieler {this.state.gewinner.id}</div>)
             }
 
             {this.state.gestartet && <>
