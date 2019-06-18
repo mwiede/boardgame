@@ -3,6 +3,7 @@ import footprint from './footprint.svg';
 import ladder from './ladder.svg';
 import shuffleIcon from './shuffle.svg';
 import hide from './hide.svg';
+import { Brett } from './Brett';
 
 class Aktion extends React.Component {
     constructor(props) {
@@ -75,10 +76,11 @@ class Spiel extends React.Component {
             spieler.push({
                 id: index,
                 position: 0,
+                farbe: null,
             });
         }
         this.setState({
-            gestartet: true,
+            gestartet: false,
             anzahlSpieler: this.state.anzahlSpieler,
             spieler: spieler,
         });
@@ -158,12 +160,16 @@ class Spiel extends React.Component {
 
         let aktionen = [einSchritt, zweiSchritte, mischen, zudecken, leiter1, leiter2];
 
+        let farben = ['red', 'blue', 'yellow', 'magenta', 'green'];
+
         this.setState({
             gestartet: false,
             gewinner: null,
             aktionen: aktionen,
             aktuellerSpieler: 0,
             aktuelleAktion: null,
+            farben: farben,
+            spieler: [],
         });
     }
 
@@ -235,68 +241,19 @@ class Spiel extends React.Component {
         });
     }
 
+    spielerDatenEingegeben() {
+        for (let index = 0; index < this.state.spieler.length; index++) {
+            const element = this.state.spieler[index];
+            if (!element.farbe) {
+                return element;
+            }
+        }
+        return null;
+    }
+
     render() {
 
-        const { anzahlSpieler, breite, hoehe, spieler, aktionen } = this.state;
-
-        const zeilen = [];
-
-        for (let zeile = 0; zeile < hoehe; zeile++) {
-            let spalten = [];
-            for (let spalte = 0; spalte < breite; spalte++) {
-
-                let gerade = zeile % 2 === 0;
-
-                let position = (breite * hoehe - 1) - (gerade ? spalte + (zeile * breite) : breite - 1 - spalte + (zeile * breite));
-
-
-                var borderRadius = '0 0 0 0';
-                var padding = '5px 0 5px 0';
-                if (spalte === 0 && gerade) { // Rundung unten links
-                    borderRadius = '0 0 0 20px';
-                    padding = '0 0 5px 0';
-                } else if (gerade && spalte === breite - 1) {// Rundung oben rechts
-                    borderRadius = '0 20px 0 0';
-                    padding = '5px 0 0 0';
-                } else if (!gerade && spalte === breite - 1) {// rundung unten rechts
-                    borderRadius = ' 0 0 20px 0';
-                    padding = '0 0 5px 0';
-                } else if (spalte === 0) { // Rundung oben links
-                    borderRadius = '20px 0 0 0';
-                    padding = '5px 0 0 0';
-                }
-
-                spalten.push(<td key={spalte} style={{
-                    border: 0,
-                    padding: padding,
-                    width: 80,
-                    height: 80,
-                }}>
-                    <div style={{
-                        width: '100%',
-                        height: '100%',
-                        borderRadius: borderRadius,
-                        backgroundColor: 'yellow',
-                        textAlign: 'center',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}>
-                        <h1>{position + 1}</h1>
-
-                        {spieler.filter(s => s.position === position).map(s =>
-                            <div key={s.id} style={{position:'absolute', marginTop: 15*s.id-10,}}>Spieler {s.id}</div>)}
-                    </div>
-
-
-                </td>);
-            }
-            zeilen.push(<tr key={zeile}>{spalten}</tr>);
-        }
-
-        const brett = <table style={{ borderCollapse: 'collapse' }}>
-            <tbody>{zeilen}</tbody>
-        </table>;
+        const { anzahlSpieler, breite, hoehe, spieler, aktionen, farben } = this.state;
 
         const aktionenListe = <div>
             {aktionen.map(aktion =>
@@ -304,27 +261,51 @@ class Spiel extends React.Component {
             )}
         </div>
 
+        const spielerMitEingabe = this.spielerDatenEingegeben();
+
         return (<>
 
-            {!this.state.gestartet && (
+            {!this.state.gestartet && spieler.length === 0 && (
                 <div>
                     Hallo, wieviele Spieler?
                     <input value={anzahlSpieler} name="anzahlSpieler" onChange={(event) => this.setState({ anzahlSpieler: event.target.value })} />
                     <input type="button" defaultValue="Start"
                         onClick={this.starteSpiel.bind(this)} /></div>)}
 
-            {this.state.gewinner && (
-                <div>Gewinner ist Spieler {this.state.gewinner.id}</div>)
+            {spieler.length > 0 && spielerMitEingabe &&
+                (<div>Spieler {spielerMitEingabe.id}, Welche Farbe?
+                {farben.map((farbe) => <label key={farbe} style={{
+                    backgroundColor: farbe,
+                }}><input type="radio" value={farbe} name="farbe"
+                    onClick={(e) => {
+                        spielerMitEingabe.farbe = e.target.value;
+                        spieler[spieler.indexOf(spielerMitEingabe)] = spielerMitEingabe;
+                        this.setState({
+                            spieler: spieler,
+                            farben: farben.filter(item => item !== e.target.value)
+                        }, () => {
+                            if (!this.spielerDatenEingegeben()) {
+                                this.setState({ gestartet: true });
+                            }
+                        });
+                    }} />{farbe}</label>)}
+                </div>)
             }
 
             {this.state.gestartet && <>
-                Aktueller Spieler: Spieler {this.state.aktuellerSpieler}
                 <div>
                     <table style={{ marginLeft: 'auto', marginRight: 'auto' }}>
                         <tbody>
                             <tr>
-                                <td width="50%">{aktionenListe}</td>
-                                <td width="50%"> {brett}</td>
+                                <td width="50%">
+                                    Aktueller Spieler: Spieler {this.state.aktuellerSpieler}<br />
+
+                                    {this.state.gewinner && (
+                                        <div>Gewinner ist Spieler {this.state.gewinner.id}</div>)
+                                    }
+
+                                    {aktionenListe}</td>
+                                <td width="50%"><Brett hoehe={hoehe} breite={breite} spieler={spieler} /></td>
                             </tr>
                         </tbody>
                     </table>
@@ -335,15 +316,11 @@ class Spiel extends React.Component {
                 </div>
             </>
             }
-
-
-
-
-
         </>)
 
 
     }
+
 }
 
 export default Spiel;

@@ -10,7 +10,6 @@ function App() {
         <img src={logo} className="App-logo" alt="logo" />   
       </header>
       <main>
-        <h1>Feuerwehrmann Sam</h1>
         <Spiel/>      
       </main>
     </div>
