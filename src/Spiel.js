@@ -4,50 +4,24 @@ import ladder from './ladder.svg';
 import shuffleIcon from './shuffle.svg';
 import hide from './hide.svg';
 import { Brett } from './Brett';
+import { Aktion } from './Aktion';
+import { MSG } from './messages';
+import Speech from 'speak-tts' // es6
+import { FarbEingabe } from './FarbEingabe';
+import { AltersEingabe } from './AltersEingabe';
+import { Gewinner } from './Gewinner';
+import { AktuellerSpieler } from './AktuellerSpieler';
 
-class Aktion extends React.Component {
-    constructor(props) {
-        super(props);
+const speech = new Speech() // will throw an exception if not browser supported
+if (speech.hasBrowserSupport()) { // returns a boolean
+    console.log("speech synthesis supported")
 
-        this.state = {
-            ausgefuehrt: false,
-        }
-    }
-
-    aufdecken() {
-
-        const { aktion, aufdeckenFunktion, spielzugFunktion } = this.props;
-        const { ausgefuehrt } = this.state;
-
-        if (!aktion.aufgedeckt) {
-            this.setState({
-                ausgefuehrt: false
-            });
-            aufdeckenFunktion();
-            setTimeout(spielzugFunktion, 1500);
-        }
-        else if (!ausgefuehrt) {
-            spielzugFunktion();
-            this.setState({
-                ausgefuehrt: true
-            });
-        }
-
-    }
-
-    render() {
-
-        const { aktion } = this.props;
-
-        return (
-            <>
-                <svg height="100" width="100" onClick={this.aufdecken.bind(this)}>
-                    <circle cx="50" cy="50" r="40" stroke="black" strokeWidth="2" fill="red" />
-                    {aktion.aufgedeckt && aktion.logo}
-                </svg>
-            </>
-        )
-    }
+    speech.init().then((data) => {
+        // The "data" object contains the list of available voices and the voice synthesis params
+        console.log("Speech is ready, voices are available", data)
+    }).catch(e => {
+        console.error("An error occured while initializing : ", e)
+    })
 }
 
 class Spiel extends React.Component {
@@ -56,6 +30,7 @@ class Spiel extends React.Component {
         super(props);
 
         this.state = {
+            play: false,
             gestartet: false,
             anzahlSpieler: 3,
             breite: 4,
@@ -65,6 +40,7 @@ class Spiel extends React.Component {
             aktuellerSpieler: 0,
             gewinner: null,
             aktuelleAktion: null,
+            vorleseText: '',
         }
         this.spielzug.bind(this);
     }
@@ -77,6 +53,7 @@ class Spiel extends React.Component {
                 id: index,
                 position: 0,
                 farbe: null,
+                alter: null,
             });
         }
         this.setState({
@@ -160,7 +137,14 @@ class Spiel extends React.Component {
 
         let aktionen = [einSchritt, zweiSchritte, mischen, zudecken, leiter1, leiter2];
 
-        let farben = ['red', 'blue', 'yellow', 'magenta', 'green'];
+        let farben = [
+            { css: 'red', name: 'rot' },
+            { css: 'blue', name: 'blau' },
+            { css: 'yellow', name: 'gelb' },
+            { css: 'magenta', name: 'rosa' },
+            { css: 'green', name: 'grün' },
+            { css: 'orange', name: 'orange' },
+        ];
 
         this.setState({
             gestartet: false,
@@ -190,6 +174,7 @@ class Spiel extends React.Component {
 
         if (aktion !== aktuelleAktion) {
             console.log('falsche Aktion');
+            this.say(MSG.KARTE_SCHON_AUFGEDECKT);
             return;
         }
 
@@ -201,6 +186,8 @@ class Spiel extends React.Component {
 
         spieler.position = aktion.schrittAktion(spieler.position, breite);
 
+        this.say(aktion.name);
+
         console.log("spieler " + spieler.id + " springt von " + positionVorher + " auf Position " + spieler.position);
 
         let gewinner = this.ermittleGewinner();
@@ -210,8 +197,10 @@ class Spiel extends React.Component {
 
             // nächster Spieler
             if (this.state.anzahlSpieler > 1) {
+                const naechsterSpielerId = (aktuellerSpieler + 1) % anzahlSpieler;
+                this.say(MSG.SPIELER_FARBE_IST_DRAN(this.state.spieler[naechsterSpielerId]), true);
                 this.setState({
-                    aktuellerSpieler: (aktuellerSpieler + 1) % anzahlSpieler,
+                    aktuellerSpieler: naechsterSpielerId,
                     aktuelleAktion: null
                 });
             } else {
@@ -219,7 +208,9 @@ class Spiel extends React.Component {
             }
         }
         else {
-            this.setState({ gewinner: gewinner });
+            this.setState({ gewinner: gewinner }, () => {
+                this.say(MSG.GEWINNER);
+            });
         }
 
     }
@@ -241,19 +232,56 @@ class Spiel extends React.Component {
         });
     }
 
+    say(msg, queue) {
+        speech.speak({
+            text: msg,
+            queue: queue | false // current speech will be interrupted,
+        });
+    }
+
     spielerDatenEingegeben() {
         for (let index = 0; index < this.state.spieler.length; index++) {
             const element = this.state.spieler[index];
             if (!element.farbe) {
+                this.say(MSG.SPIELER_WELCHE_FARBE(element));
+                return element;
+            } else if (!element.alter) {
+                this.say(MSG.SPIELER_WELCHES_ALTER(element));
                 return element;
             }
         }
         return null;
     }
 
+    setzeSpielerFarbe(spielerMitEingabe, farbe) {
+        const { spieler, farben } = this.state;
+        spielerMitEingabe.farbe = farbe;
+        spieler[spieler.indexOf(spielerMitEingabe)] = spielerMitEingabe;
+        this.say(farbe.name);
+        this.setState({
+            spieler: spieler,
+            farben: farben.filter(item => item !== farbe)
+        }, this.starten);
+    }
+
+    setzeSpielerAlter(spielerMitEingabe, alter) {
+        const { spieler } = this.state;
+        spielerMitEingabe.alter = alter;
+        this.setState({
+            spieler: spieler,
+        }, this.starten);
+    }
+
+    starten() {
+        const fehlenNochEingaben = this.spielerDatenEingegeben();
+        if (!fehlenNochEingaben) {
+            this.say(MSG.SPIELER_FARBE_IST_DRAN(this.state.spieler[this.state.aktuellerSpieler]))
+            this.setState({ gestartet: true });
+        }
+    }
     render() {
 
-        const { anzahlSpieler, breite, hoehe, spieler, aktionen, farben } = this.state;
+        const { play, anzahlSpieler, breite, hoehe, spieler, aktionen, farben, gestartet, aktuellerSpieler } = this.state;
 
         const aktionenListe = <div>
             {aktionen.map(aktion =>
@@ -263,33 +291,31 @@ class Spiel extends React.Component {
 
         const spielerMitEingabe = this.spielerDatenEingegeben();
 
+        const zahlen = [...Array(10).keys()].slice(3, 10);
+
         return (<>
 
-            {!this.state.gestartet && spieler.length === 0 && (
+            {!play &&
+                <svg height="100" width="100" onClick={() => this.setState({ play: true })}>
+                    <circle cx="50" cy="50" r="30" stroke="black" strokeWidth="2" fill="white" />
+                    <text x="54%" y="50%" textAnchor="middle" alignmentBaseline="middle" fontSize="10vh">&#9654;</text>
+                </svg>
+            }
+
+            {play && !gestartet && spieler.length === 0 && (
                 <div>
-                    Hallo, wieviele Spieler?
-                    <input value={anzahlSpieler} name="anzahlSpieler" onChange={(event) => this.setState({ anzahlSpieler: event.target.value })} />
+                    Hallo, wieviele Spieler?<br />
+                    <input value={anzahlSpieler} name="anzahlSpieler" onChange={(event) =>
+                        this.setState({ anzahlSpieler: event.target.value })} />
                     <input type="button" defaultValue="Start"
                         onClick={this.starteSpiel.bind(this)} /></div>)}
 
-            {spieler.length > 0 && spielerMitEingabe &&
-                (<div>Spieler {spielerMitEingabe.id}, Welche Farbe?
-                {farben.map((farbe) => <label key={farbe} style={{
-                    backgroundColor: farbe,
-                }}><input type="radio" value={farbe} name="farbe"
-                    onClick={(e) => {
-                        spielerMitEingabe.farbe = e.target.value;
-                        spieler[spieler.indexOf(spielerMitEingabe)] = spielerMitEingabe;
-                        this.setState({
-                            spieler: spieler,
-                            farben: farben.filter(item => item !== e.target.value)
-                        }, () => {
-                            if (!this.spielerDatenEingegeben()) {
-                                this.setState({ gestartet: true });
-                            }
-                        });
-                    }} />{farbe}</label>)}
-                </div>)
+            {spieler.length > 0 && spielerMitEingabe && !spielerMitEingabe.farbe &&
+                <FarbEingabe spieler={spielerMitEingabe} farben={farben} setzeSpielerFarbe={this.setzeSpielerFarbe.bind(this)} />
+            }
+
+            {spieler.length > 0 && spielerMitEingabe && spielerMitEingabe.farbe && !spielerMitEingabe.alter &&
+                <AltersEingabe spieler={spielerMitEingabe} zahlen={zahlen} setzeSpielerAlter={this.setzeSpielerAlter.bind(this)} />
             }
 
             {this.state.gestartet && <>
@@ -298,11 +324,13 @@ class Spiel extends React.Component {
                         <tbody>
                             <tr>
                                 <td width="50%">
-                                    Aktueller Spieler: Spieler {this.state.aktuellerSpieler}<br />
-
-                                    {this.state.gewinner && (
-                                        <div>Gewinner ist Spieler {this.state.gewinner.id}</div>)
+                                    {!this.state.gewinner &&
+                                        <AktuellerSpieler spieler={spieler[aktuellerSpieler]} />
                                     }
+
+                                    {this.state.gewinner && <Gewinner gewinner={spieler[this.state.gewinner.id]}/>}
+
+                                    <br />
 
                                     {aktionenListe}</td>
                                 <td width="50%"><Brett hoehe={hoehe} breite={breite} spieler={spieler} /></td>
@@ -320,7 +348,5 @@ class Spiel extends React.Component {
 
 
     }
-
 }
-
 export default Spiel;
