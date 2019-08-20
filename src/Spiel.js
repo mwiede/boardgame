@@ -292,6 +292,10 @@ class Spiel extends React.Component {
         const spielerMitEingabe = this.spielerDatenEingegeben();
 
         const zahlen = [...Array(10).keys()].slice(3, 10);
+        
+        if(play && !gestartet && spieler.length === 0){
+            this.say('Hallo, wieviele Spieler seid ihr?');
+        }
 
         return (<>
 
