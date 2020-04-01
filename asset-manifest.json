@@ -1,0 +1,20 @@
+{
+  "files": {
+    "main.css": "/boardgame/static/css/main.4e0273e1.chunk.css",
+    "main.js": "/boardgame/static/js/main.76217aa5.chunk.js",
+    "main.js.map": "/boardgame/static/js/main.76217aa5.chunk.js.map",
+    "runtime~main.js": "/boardgame/static/js/runtime~main.18b18355.js",
+    "runtime~main.js.map": "/boardgame/static/js/runtime~main.18b18355.js.map",
+    "static/js/2.8d2f60bb.chunk.js": "/boardgame/static/js/2.8d2f60bb.chunk.js",
+    "static/js/2.8d2f60bb.chunk.js.map": "/boardgame/static/js/2.8d2f60bb.chunk.js.map",
+    "index.html": "/boardgame/index.html",
+    "precache-manifest.5895626056daf925875f525864e840f3.js": "/boardgame/precache-manifest.5895626056daf925875f525864e840f3.js",
+    "service-worker.js": "/boardgame/service-worker.js",
+    "static/css/main.4e0273e1.chunk.css.map": "/boardgame/static/css/main.4e0273e1.chunk.css.map",
+    "static/media/footprint.svg": "/boardgame/static/media/footprint.eb70ae80.svg",
+    "static/media/hide.svg": "/boardgame/static/media/hide.b3773190.svg",
+    "static/media/ladder.svg": "/boardgame/static/media/ladder.11938bf5.svg",
+    "static/media/logo.svg": "/boardgame/static/media/logo.ee7cd8ed.svg",
+    "static/media/shuffle.svg": "/boardgame/static/media/shuffle.6fa37654.svg"
+  }
+}
