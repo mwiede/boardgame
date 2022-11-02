@@ -4,7 +4,7 @@
   "private": true,
   "homepage": "https://mwiede.github.io/boardgame",
   "dependencies": {
-    "gh-pages": "^2.2.0",
+    "gh-pages": "^4.0.0",
     "react": "^16.14.0",
     "react-dom": "^16.8.6",
     "react-scripts": "5.0.1",
